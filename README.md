@@ -8,8 +8,8 @@
 ## Aluno
 
 | Nome | Matrícula | Usuário do GitHub |
-| --- | --- | --- |
-|  |  |  |
+|---|---|---|
+| Julyan Eric Lopes Pinto | 2422084 | julyaneric8 |
 
 ## O cenário
 
