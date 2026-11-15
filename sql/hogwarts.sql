@@ -699,3 +699,56 @@ CREATE OR REPLACE VIEW vw_placar_casas AS
 SELECT nome_casa, fundador, pontos
 FROM casa
 ORDER BY pontos DESC;
+
+-- Questão 39
+CREATE USER 'filch'@'localhost' IDENTIFIED BY 'MadameNorra#1';
+CREATE USER 'mcgonagall'@'localhost' IDENTIFIED BY 'Animago#Gato1';
+CREATE USER 'dumbledore'@'localhost' IDENTIFIED BY 'Fenix#Fawkes1';
+
+-- Questão 40
+GRANT SELECT ON hogwarts.vw_placar_casas TO 'filch'@'localhost';
+-- Questão 41
+GRANT SELECT, INSERT ON hogwarts.registro_pontos TO 'mcgonagall'@'localhost';
+GRANT SELECT ON hogwarts.aluno TO 'mcgonagall'@'localhost';
+GRANT SELECT ON hogwarts.vw_boletim TO 'mcgonagall'@'localhost';
+-- Questão 42
+GRANT ALL PRIVILEGES ON hogwarts.* TO 'dumbledore'@'localhost' WITH GRANT OPTION;
+-- Questão 43
+SHOW GRANTS FOR 'filch'@'localhost';
+SHOW GRANTS FOR 'mcgonagall'@'localhost';
+SHOW FULL TABLES IN hogwarts WHERE Table_type = 'VIEW';
+
+-- Questão 44
+-- (conectado como filch)
+-- SELECT * FROM vw_placar_casas;
+-- Resultado: funcionou e mostrou o placar das 4 casas.
+-- SELECT * FROM aluno;
+-- Error Code: 1142. SELECT command denied to user 'filch'@'localhost' for table 'aluno'
+-- Explicação: o filch só recebeu SELECT na view vw_placar_casas. Ele não tem permissão sobre a tabela aluno, então o banco nega o acesso.
+
+-- Questão 45
+-- (conectado como mcgonagall)
+INSERT INTO registro_pontos (id_aluno, id_prof, pontos, motivo, data_registro)
+VALUES (2, 1, 10, 'Ajudou um colega em Transfiguração', '2026-11-10');
+
+-- UPDATE casa SET pontos = 1000 WHERE id_casa = 1;
+-- Error Code: 1142. UPDATE command denied to user 'mcgonagall'@'localhost' for table 'casa'
+-- Explicação: a McGonagall não tem permissão de UPDATE na tabela casa, então o banco nega o comando.
+-- Resposta: o trigger trg_pontos_casa roda com os privilégios do usuário que o criou (o definer, aqui o root), e não com os de quem disparou o INSERT. Por isso ele consegue atualizar a tabela casa, mesmo que a McGonagall não tenha esse direito.
+
+-- Questão 46
+REVOKE INSERT ON hogwarts.registro_pontos FROM 'mcgonagall'@'localhost';
+SHOW GRANTS FOR 'mcgonagall'@'localhost';
+
+-- Questão 47
+CREATE ROLE 'monitor';
+GRANT SELECT ON hogwarts.vw_boletim TO 'monitor';
+GRANT SELECT ON hogwarts.vw_placar_casas TO 'monitor';
+CREATE USER 'percy'@'localhost' IDENTIFIED BY 'Monitor#Chefe1';
+GRANT 'monitor' TO 'percy'@'localhost';
+SET DEFAULT ROLE 'monitor' TO 'percy'@'localhost';
+-- Resposta: com o papel, as permissões são definidas uma vez só e atribuídas a cada monitor com um único GRANT. Se as permissões mudarem, basta alterar o papel e todos os monitores são atualizados. Dar as permissões direto para cada usuário exigiria repetir os comandos para cada monitor e corrigir um por um a cada mudança.
+
+-- Questão 48
+DROP USER 'filch'@'localhost', 'mcgonagall'@'localhost', 'dumbledore'@'localhost', 'percy'@'localhost';
+DROP ROLE 'monitor';
