@@ -195,32 +195,144 @@ select count(*) from produto;     -- 8
 
 
 -- =====================================================================
+-- 1.1 CARGA INICIAL DE DADOS (DML)
+-- =====================================================================
+-- INSERT casa
+insert into casa (nome_casa, fundador) values
+('grifinória', 'godric gryffindor'),    -- 1
+('sonserina', 'salazar slytherin'),     -- 2
+('corvinal', 'rowena ravenclaw'),       -- 3
+('lufa-lufa', 'helga hufflepuff');      -- 4
+-- INSERT professor
+insert into professor (nome, salario, data_contratacao, id_casa) values
+('minerva mcgonagall', 9500.00, '1956-12-01', 1),   -- 1
+('severo snape', 8800.00, '1981-09-01', 2),         -- 2
+('fílio flitwick', 8200.00, '1974-09-01', 3),       -- 3
+('pomona sprout', 7900.00, '1972-09-01', 4),        -- 4
+('rúbeo hagrid', 4500.00, '1993-09-01', null),      -- 5
+('remo lupin', 6200.00, '1993-09-01', null),        -- 6
+('sibila trelawney', 5100.00, '1980-09-01', null),  -- 7
+('gilderoy lockhart', 7000.00, '1992-09-01', null), -- 8
+('horácio slughorn', 8000.00, '1996-09-01', null);  -- 9
+-- INSERT disciplina
+insert into disciplina (nome_disc, ano_minimo, id_prof) values
+('transfiguração', 1, 1),                        -- 1
+('poções', 1, 2),                                -- 2
+('feitiços', 1, 3),                              -- 3
+('herbologia', 1, 4),                            -- 4
+('trato das criaturas mágicas', 3, 5),           -- 5
+('defesa contra as artes das trevas', 1, 6),     -- 6
+('adivinhação', 3, 7),                           -- 7
+('estudo dos trouxas', 3, null),                 -- 8
+('runas antigas', 3, null);                      -- 9
+-- INSERT aluno
+insert into aluno (nome, ano_escolar, id_casa, saldo_galeoes) values
+('harry potter', 5, 1, 120.00),         -- 1
+('hermione granger', 5, 1, 85.00),      -- 2
+('rony weasley', 5, 1, 12.00),          -- 3
+('neville longbottom', 5, 1, 30.00),    -- 4
+('draco malfoy', 5, 2, 500.00),         -- 5
+('pansy parkinson', 5, 2, 150.00),      -- 6
+('vicente crabbe', 5, 2, 40.00),        -- 7
+('luna lovegood', 4, 3, 45.00),         -- 8
+('cho chang', 6, 3, 200.00),            -- 9
+('padma patil', 5, 3, 60.00),           -- 10
+('cedrico diggory', 7, 4, 180.00),      -- 11
+('ana abbott', 5, 4, 25.00),            -- 12
+('ernesto macmillan', 5, 4, 70.00),     -- 13
+('teddy lupin', 1, null, 0.00);         -- 14 (ainda não passou pelo chapéu seletor)
+-- INSERT matricula
+insert into matricula (id_aluno, id_disc, nota) values
+(1,1,7.5),(1,2,5.0),(1,6,9.8),(1,5,8.0),
+(2,1,10.0),(2,2,9.5),(2,3,10.0),(2,5,9.0),(2,9,9.5),
+(3,1,6.0),(3,2,4.5),(3,7,5.5),
+(4,2,3.0),(4,4,10.0),(4,6,7.0),
+(5,2,9.0),(5,1,7.0),(5,5,4.0),
+(6,2,7.5),(6,7,6.5),
+(7,2,3.5),(7,6,2.0),
+(8,5,8.5),(8,3,8.0),(8,4,9.0),
+(9,3,8.5),(9,6,7.5),
+(10,3,9.0),(10,7,6.0),
+(11,4,8.5),(11,6,9.0),(11,1,8.0),
+(12,4,8.0),
+(13,4,7.0),(13,3,7.5);
+-- INSERT produto
+insert into produto (nome_produto, loja, preco, estoque) values
+('varinha de azevinho', 'olivaras', 7.00, 10),                        -- 1
+('vassoura nimbus 2001', 'artigos de quadribol', 300.00, 3),          -- 2
+('sapo de chocolate', 'dedosdemel', 2.00, 200),                       -- 3
+('feijõezinhos de todos os sabores', 'dedosdemel', 1.50, 150),        -- 4
+('livro monstruoso dos monstros', 'floreios e borrões', 12.00, 20),   -- 5
+('caldeirão de estanho', 'caldeirões potage', 9.00, 0),               -- 6
+('kit de logros', 'gemialidades weasley', 25.00, 40),                 -- 7
+('pena de repetição rápida', 'escribbulus', 15.00, 5);                -- 8
+-- Confira: SELECT COUNT(*) de cada tabela
+select count(*) from casa;        -- 4
+select count(*) from professor;   -- 9
+select count(*) from disciplina;  -- 9
+select count(*) from aluno;       -- 14
+select count(*) from matricula;   -- 35
+select count(*) from produto;     -- 8
+
+-- =====================================================================
 -- 2. MANUTENÇÃO PÓS-CARGA (ALTER E UPDATE)
 -- =====================================================================
+-- 2.1 alterações de estrutura (alter table)
 -- Questão 1
-
+alter table aluno add column email varchar(100);
 -- Questão 2
-
+alter table matricula add column situacao varchar(20) default 'cursando';
 -- Questão 3
-
+alter table produto add column ativo char(1) default 's';
 -- Questão 4
-
+alter table casa modify column fundador varchar(100);
 -- Questão 5
-
+alter table professor rename column data_contratacao to data_admissao;
+-- confira
+desc aluno;
+desc matricula;
+desc produto;
+desc casa;
+desc professor;
+-- 2.2 atualizações de dados (update)
 -- Questão 6
-
+update aluno
+set email = concat(lower(replace(nome, ' ', '.')), '@hogwarts.edu');
 -- Questão 7
-
+alter table aluno
+add constraint uq_aluno_email unique (email);
 -- Questão 8
-
+update matricula
+set nota = least(nota + 0.5, 10)
+ where id_disc in (
+ select id_disc
+ from disciplina
+ where id_prof in (select id_prof from professor where nome = 'remo lupin')
+ );
 -- Questão 9
-
+update matricula
+set situacao = case
+when nota >= 6 then 'aprovado'
+else 'reprovado'
+end;
 -- Questão 10
-
+update professor
+set salario = salario * 1.10
+where id_casa is not null
+and data_admissao < '1980-01-01';
 -- Questão 11
-
+update produto
+set ativo = 'n'
+ where estoque = 0;
 -- Questão 12
-
+update produto
+set preco = preco * 0.80
+where loja = 'dedosdemel';
+-- confira
+select nota from matricula where id_aluno = 1 and id_disc = 6;       -- 10.00
+select count(*) from matricula where situacao = 'reprovado';         -- 7
+select salario from professor where nome = 'minerva mcgonagall';     -- 10450.00
+select preco from produto where nome_produto = 'sapo de chocolate';  -- 1.60
 
 -- =====================================================================
 -- 3. REMOÇÃO DE DADOS (DELETE) E TESTES DE RESTRIÇÕES
