@@ -363,3 +363,41 @@ UPDATE professor SET salario = 5000.00 WHERE nome = 'Rúbeo Hagrid';
 UPDATE professor SET data_admissao = '1993-08-15' WHERE nome = 'Rúbeo Hagrid';
 SELECT * FROM log_auditoria;
 -- Explicação: apareceu 1 linha em log_auditoria. Só o primeiro UPDATE mudou o salário, então o trigger trg_audita_salario (condição OLD.salario <> NEW.salario) gravou o log. O segundo UPDATE alterou apenas a data_admissao, o salário continuou igual e nada foi gravado. O reajuste da questão 10 não aparece no log porque, naquele momento, o trigger ainda não existia: ele só foi criado na seção 4, depois da questão 10.
+
+-- Questão 26
+START TRANSACTION;
+UPDATE aluno SET saldo_galeoes = saldo_galeoes - 50 WHERE nome = 'Draco Malfoy';
+UPDATE aluno SET saldo_galeoes = saldo_galeoes + 50 WHERE nome = 'Pansy Parkinson';
+COMMIT;
+
+-- Questão 27
+START TRANSACTION;
+UPDATE casa SET pontos = 0;
+SELECT nome_casa, pontos FROM casa;
+ROLLBACK;
+SELECT nome_casa, pontos FROM casa;
+-- Resposta: sim, o placar voltou. Dentro da transação todas as casas ficaram com 0 pontos, mas o ROLLBACK desfez a alteração e os pontos anteriores foram restaurados.
+
+-- Questão 28
+START TRANSACTION;
+INSERT INTO compra (id_aluno, id_produto, quantidade, data_compra) VALUES (1, 1, 1, '2026-11-10');
+SELECT saldo_galeoes FROM aluno WHERE id_aluno = 1;
+SELECT estoque FROM produto WHERE id_produto = 1;
+ROLLBACK;
+SELECT saldo_galeoes FROM aluno WHERE id_aluno = 1;
+SELECT estoque FROM produto WHERE id_produto = 1;
+-- Resposta: as alterações feitas pelo trigger (baixa do estoque e desconto do saldo) também foram desfeitas. O trigger roda dentro da mesma transação do INSERT, então o ROLLBACK desfaz a compra e tudo o que o trigger fez. O saldo do Harry voltou a 54.00 e o estoque da varinha a 9.
+
+-- Questão 29
+START TRANSACTION;
+INSERT INTO registro_pontos (id_aluno, id_prof, pontos, motivo, data_registro)
+VALUES (12, 4, 15, 'Cuidou das estufas no feriado', '2026-11-10');
+SAVEPOINT sp_pontos_legitimos;
+INSERT INTO registro_pontos (id_aluno, id_prof, pontos, motivo, data_registro)
+VALUES (6, 2, 100, 'Favoritismo descarado', '2026-11-10');
+ROLLBACK TO sp_pontos_legitimos;
+COMMIT;
+
+-- Questão 30
+SELECT @@autocommit;
+-- Resposta: o valor 1 significa que o autocommit está ligado: cada comando é confirmado automaticamente assim que executa, a não ser que se abra uma transação com START TRANSACTION. Se um CREATE TABLE for executado no meio de uma transação aberta, o MySQL faz um commit implícito antes do comando (comandos DDL não podem ser desfeitos), então tudo o que estava pendente é confirmado e um ROLLBACK posterior não desfaz mais nada.
