@@ -194,3 +194,36 @@ WHERE id_casa IS NOT NULL
 UPDATE produto SET ativo = 'N' WHERE estoque = 0;
 -- Questão 12
 UPDATE produto SET preco = preco * 0.80 WHERE loja = 'Dedosdemel';
+
+-- Questão 13
+-- DELETE FROM casa WHERE nome_casa = 'Sonserina';
+-- Error Code: 1451. Cannot delete or update a parent row: a foreign key constraint fails (`hogwarts`.`aluno`, CONSTRAINT `aluno_ibfk_1` FOREIGN KEY (`id_casa`) REFERENCES `casa` (`id_casa`))
+-- Explicação: a casa Sonserina é referenciada por alunos (e por um professor) através da chave estrangeira id_casa. O banco não deixa apagar a linha "pai" enquanto existirem linhas "filhas" apontando para ela, para não deixar registros órfãos.
+
+-- Questão 14
+-- INSERT INTO aluno (nome, ano_escolar, id_casa) VALUES ('Dobby', 8, 1);
+-- Error Code: 3819. Check constraint 'aluno_chk_1' is violated.
+-- Explicação: a coluna ano_escolar tem um CHECK que só aceita valores entre 1 e 7. O 8º ano viola essa regra, então o banco recusa o cadastro.
+
+-- Questão 15
+-- INSERT INTO aluno (nome, ano_escolar, id_casa, email) VALUES ('Harry Potter (Polissuco)', 5, 1, 'harry.potter@hogwarts.edu');
+-- Error Code: 1062. Duplicate entry 'harry.potter@hogwarts.edu' for key 'aluno.uq_aluno_email'
+-- Explicação: a restrição UNIQUE uq_aluno_email não permite dois alunos com o mesmo e-mail, e esse e-mail já pertence ao Harry Potter verdadeiro.
+
+-- Questão 16
+-- DELETE FROM professor WHERE nome = 'Severo Snape';
+-- Error Code: 1451. Cannot delete or update a parent row: a foreign key constraint fails (`hogwarts`.`disciplina`, CONSTRAINT `disciplina_ibfk_1` FOREIGN KEY (`id_prof`) REFERENCES `professor` (`id_prof`))
+-- Explicação: Snape é o professor da disciplina Poções, que o referencia pela chave estrangeira id_prof. Enquanto houver disciplina apontando para ele, o banco não permite a exclusão.
+
+-- Questão 17
+DELETE FROM professor WHERE nome = 'Gilderoy Lockhart';
+-- Explicação: este funciona porque nenhuma outra tabela referencia Lockhart (ele não ministra nenhuma disciplina nem tem registros de pontos). Sem linhas filhas, não há violação de chave estrangeira. O Snape não podia ser excluído porque a disciplina Poções dependia dele.
+
+-- Questão 18
+DELETE FROM matricula
+WHERE id_aluno IN (SELECT id_aluno FROM aluno WHERE nome = 'Vicente Crabbe');
+DELETE FROM aluno WHERE nome = 'Vicente Crabbe';
+
+-- Questão 19
+DELETE FROM disciplina
+WHERE id_disc NOT IN (SELECT id_disc FROM matricula);
