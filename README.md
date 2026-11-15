@@ -8,8 +8,9 @@
 ## Aluno
 
 | Nome | Matrícula | Usuário do GitHub |
-| --- | --- | --- |
-|  |  |  |
+|------|-----------|-------------------|
+| Carlos Alencar | 2400784 | xandealencar-S |
+
 
 ## O cenário
 
