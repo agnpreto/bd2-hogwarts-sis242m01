@@ -8,7 +8,7 @@
 ## Aluno
 
 | Nome | Matrícula | Usuário do GitHub |
-| --- | --- | --- |
+| Renê | 2535067 | araujo37 |
 |  |  |  |
 
 ## O cenário
