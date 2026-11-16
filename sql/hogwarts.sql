@@ -269,26 +269,60 @@ WHERE loja = 'Dedosdemel';
 -- 3. REMOÇÃO DE DADOS (DELETE) E TESTES DE RESTRIÇÕES
 -- =====================================================================
 -- Questão 13
--- Erro:
--- Explicação:
+-- Erro: Error Code: 1451. Cannot delete or update a parent row: a foreign key
+-- constraint fails (`hogwarts`.`aluno`, CONSTRAINT `fk_aluno_casa` FOREIGN KEY
+-- (`id_casa`) REFERENCES `casa` (`id_casa`))
+
+-- Explicação: A Sonserina é a casa pai de outras linhas: Draco e Pansy da tabela aluno
+-- e o professor Snape, que a dirige, guardam o id_casa dela em uma chave estrangeira.
+-- Para garantir a integridade referencial, o banco não deixa excluir
+-- a linha referenciada enquanto existirem linhas filhas apontando para ela, senão
+-- alunos e professores ficariam com um id_casa que não existe mais. Para
+-- excluir, seria preciso antes remover ou reatribuir esses alunos e professores.
 
 -- Questão 14
--- Erro:
--- Explicação:
+-- Erro: Error Code: 3819. Check constraint 'ck_aluno_ano' is violated.
+-- Explicação: A tabela aluno tem CHECK (ano_escolar BETWEEN 1 AND 7). Hogwarts tem
+-- apenas 7 anos, então o 8º ano do Dobby viola a regra de domínio e o MySQL rejeita o insert
 
 -- Questão 15
--- Erro:
--- Explicação:
+-- Erro: Error Code: 1062. Duplicate entry 'harry.potter@hogwarts.edu' for key 'aluno.uq_aluno_email'
+-- Explicação: A restrição UNIQUE uq_aluno_email criada na questão 7 não permite dois
+-- alunos com o mesmo e-mail, e o Harry Potter verdadeiro já usa harry.potter@hogwarts.edu. 
+-- Mesmo com o nome diferente, o e-mail repetido faz o insert falhar.
 
 -- Questão 16
--- Erro:
--- Explicação:
+-- Erro: Error Code: 1451. Cannot delete or update a parent row: a foreign key
+-- constraint fails (`hogwarts`.`disciplina`, CONSTRAINT `fk_disciplina_prof` FOREIGN
+-- KEY (`id_prof`) REFERENCES `professor` (`id_prof`))
+-- Explicação: O Snape é o professor de Poções: a disciplina 2 tem id_prof = 2.
+-- Excluir ele deixaria essa disciplina apontando para um professor que não existe, então
+-- a chave estrangeira fk_disciplina_prof bloqueia a exclusão
 
 -- Questão 17
+DELETE FROM professor WHERE nome = 'Gilderoy Lockhart';
+-- Por que este funciona e o anterior não?
+-- O Lockhart não é referenciado por nenhuma linha de tabela filha onde nenhuma disciplina
+-- tem id_prof = 8 (as disciplinas sem professor estão com id_prof NULL) e ele não tem
+-- registros de pontos. Sem filhos apontando para ele, a exclusão não quebra nenhuma
+-- chave estrangeira e é aceita. O Snape, ao contrário, ainda era o professor de Poções.
 
 -- Questão 18
+DELETE FROM matricula
+WHERE id_aluno IN (SELECT id_aluno FROM aluno WHERE nome = 'Vicente Crabbe');
+
+DELETE FROM aluno WHERE nome = 'Vicente Crabbe';
 
 -- Questão 19
+DELETE FROM disciplina
+WHERE id_disc NOT IN (SELECT id_disc FROM matricula);
+
+-- Confira: após a seção 3 devem restar 8 professores, 13 alunos, 8 disciplinas (Estudo dos
+-- Trouxas foi removida) e 33 matrículas
+SELECT 'professor' AS tabela, COUNT(*) AS total FROM professor
+UNION ALL SELECT 'aluno',COUNT(*) FROM aluno
+UNION ALL SELECT 'disciplina',COUNT(*) FROM disciplina
+UNION ALL SELECT 'matricula',COUNT(*) FROM matricula;
 
 
 -- =====================================================================
