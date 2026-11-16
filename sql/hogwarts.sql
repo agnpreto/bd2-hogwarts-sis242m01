@@ -285,39 +285,161 @@ where nome = 'vicente crabbe';
 -- Questão 19
 delete from disciplina
 where id_disc not in (select id_disc from matricula);
-
+-- confirmação
+select count(*) from professor;   -- 8
+select count(*) from aluno;       -- 13
+select count(*) from disciplina;  -- 8
+select count(*) from matricula;   -- 33
+  
 -- =====================================================================
 -- 4. TRIGGERS
 -- =====================================================================
 -- Questão 20 - trg_pontos_casa
-
+delimiter $$
+create trigger trg_pontos_casa
+after insert on registro_pontos
+for each row
+begin
+update casa
+set pontos = pontos + new.pontos
+where id_casa = (select id_casa from aluno where id_aluno = new.id_aluno);
+end$$
+delimiter ;
 -- Questão 21 - trg_valida_compra
-
+delimiter $$
+create trigger trg_valida_compra
+before insert on compra
+for each row
+begin
+declare v_estoque int;
+declare v_preco   decimal(10,2);
+declare v_saldo   decimal(10,2);
+select estoque, preco into v_estoque, v_preco
+from produto
+where id_produto = new.id_produto;
+select saldo_galeoes into v_saldo
+from aluno
+where id_aluno = new.id_aluno;
+if v_estoque < new.quantidade then
+signal sqlstate '45000'
+set message_text = 'estoque insuficiente no beco diagonal';
+end if;
+if v_saldo < v_preco * new.quantidade then
+signal sqlstate '45000'
+set message_text = 'galeões insuficientes no cofre do aluno';
+end if;
+set new.valor_total = v_preco * new.quantidade;
+end$$
+delimiter ;
 -- Questão 22 - trg_baixa_compra
-
+delimiter $$
+create trigger trg_baixa_compra
+after insert on compra
+for each row
+begin
+update produto
+set estoque = estoque - new.quantidade
+where id_produto = new.id_produto;
+update aluno
+set saldo_galeoes = saldo_galeoes - new.valor_total
+where id_aluno = new.id_aluno;
+end$$
+delimiter ;
 -- Questão 23 - trg_situacao_nota
-
+delimiter $$
+create trigger trg_situacao_nota
+before update on matricula
+for each row
+begin
+if not (old.nota <=> new.nota) then
+if new.nota >= 6 then
+set new.situacao = 'aprovado';
+else
+set new.situacao = 'reprovado';
+end if;
+end if;
+end$$
+delimiter ;
 -- Questão 24 - trg_audita_salario
-
+delimiter $$
+create trigger trg_audita_salario
+after update on professor
+for each row
+begin
+if old.salario <> new.salario then
+insert into log_auditoria (tabela, operacao, descricao)
+values ('professor', 'update',
+concat(new.nome, ': salário de ', old.salario, ' para ', new.salario));
+end if;
+end$$
+delimiter ;
 -- Pergunta para pensar: por que a validação é BEFORE e a baixa é AFTER?
--- Resposta:
-
+-- Resposta: O BEFORE valida os dados (SIGNAL) e calcula o total antes de salvar, enquanto o AFTER dá baixa no estoque e no saldo apenas se a compra for confirmada.
+-- testando os triggers
 -- Questão 25 - INSERT registro_pontos
-
+insert into registro_pontos (id_aluno, id_prof, pontos, motivo, data_registro) values
+( 2, 3, 20, 'feitiço de levitação perfeito', '2026-09-10'),
+( 1, 2, -10, 'atraso na aula de poções', '2026-09-12'),
+( 5, 2, 15, 'poção do morto-vivo impecável', '2026-09-12'),
+( 8, 5, 10, 'cuidou de um testrálio ferido', '2026-09-20'),
+(11, 4, 25, 'ajudou os alunos do 1º ano', '2026-09-25'),
+( 4, 4, 30, 'identificou uma mimbulus mimbletonia', '2026-10-02'),
+( 6, 1, -20, 'fora da cama após o toque de recolher', '2026-10-05'),
+( 1, 6, 50, 'conjurou um patrono corpóreo', '2026-10-15'),
+( 9, 3, 15, 'duelo exemplar no clube de duelos', '2026-10-18'),
+( 5, 1, -30, 'duelo proibido no corredor', '2026-10-31'),
+(10, 7, 5, 'interpretação da bola de cristal', '2026-11-03'),
+(13, 4, 10, 'colheita de mandrágoras', '2026-11-05'),
+( 3, 9, 10, 'identificou um bezoar', '2026-11-06'),
+( 8, 3, 20, 'resposta brilhante sobre o diadema', '2026-11-08'),
+( 6, 2, 25, 'antídoto para venenos comuns', '2026-11-09'),
+( 5, 9, 40, 'melhor poção do clube do slugue', '2026-11-09');
 -- Questão 25 - INSERT compra
-
+insert into compra (id_aluno, id_produto, quantidade, data_compra) values
+( 5, 2, 1, '2026-09-01'),
+( 2, 5, 2, '2026-09-02'),
+( 1, 3, 10, '2026-09-03'),
+( 3, 4, 5, '2026-09-03'),
+( 9, 8, 1, '2026-09-15'),
+( 8, 5, 1, '2026-09-20'),
+(11, 1, 1, '2026-10-01'),
+( 6, 3, 20, '2026-10-10'),
+( 1, 7, 2, '2026-10-20'),
+(13, 4, 10, '2026-11-02');
 -- Questão 25 - Rony tenta comprar a Nimbus
--- Resultado:
-
+insert into compra (id_aluno, id_produto, quantidade, data_compra)
+-- values (3, 2, 1, '2026-11-10');
+-- resultado: error code 1644. galeões insuficientes no cofre do aluno
+-- (o estoque da nimbus ainda tinha 2, mas o rony só tem 12 galeões e a vassoura custa 300.)
 -- Questão 25 - Hermione tenta comprar o caldeirão
--- Resultado:
-
+insert into compra (id_aluno, id_produto, quantidade, data_compra)
+-- values (2, 6, 1, '2026-11-10');
+-- resultado: error code 1644. estoque insuficiente no beco diagonal
+-- (o caldeirão tem estoque 0. o estoque é verificado primeiro, por isso o erro não é de saldo.)
 -- Questão 25 - Recuperação do Rony em Poções
-
+update matricula
+set nota = 6.5
+where id_aluno = 3 and id_disc = 2;
+select id_aluno, id_disc, nota, situacao
+from matricula
+where id_aluno = 3 and id_disc = 2;
+-- resultado: situacao passou de 'reprovado' para 'aprovado', sem mexer na coluna situacao (trg_situacao_nota).
 -- Questão 25 - Salário e data de admissão do Hagrid
+update professor set salario = 5000.00 where nome = 'rúbeo hagrid';
+update professor set data_admissao = '1993-08-15' where nome = 'rúbeo hagrid';
+select * from log_auditoria;
 -- Linhas em log_auditoria:
 -- Por que o reajuste da questão 10 não aparece:
-
+-- O reajuste anterior não aparece porque foi feito antes da criação do trigger, e a alteração na data de admissão também não gera log porque não mudou o salário.
+-- confirmação
+select nome_casa, pontos from casa order by pontos desc;
+-- grifinória 100, corvinal 50, lufa-lufa 35, sonserina 30
+select nome, saldo_galeoes from aluno where id_aluno in (1, 5);
+-- draco 200.00, harry 54.00
+select nome_produto, estoque from produto where id_produto in (2, 3);
+-- nimbus 2, sapo de chocolate 170
+select sum(valor_total) from compra;   -- 474.00
+select count(*) from log_auditoria;    -- 1
 
 -- =====================================================================
 -- 5. CONTROLE DE TRANSAÇÕES (TCL)
