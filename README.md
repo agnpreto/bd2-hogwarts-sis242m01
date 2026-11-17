@@ -9,7 +9,7 @@
 
 | Nome | Matrícula | Usuário do GitHub |
 | --- | --- | --- |
-|  |  |  |
+| Maria Luiza O. Teodoro | 2538557 | MariaLuiza007-Teo |
 
 ## O cenário
 
