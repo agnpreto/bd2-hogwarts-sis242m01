@@ -8,7 +8,7 @@
 ## Aluno
 
 | Nome | Matrícula | Usuário do GitHub |
-| Bruna Muro | 2527820 | BrunaMuro |
+| Bruna Muro | 2527820 | brunaisabellye-cloud |
 |  |  |  |
 
 ## O cenário
