@@ -6,10 +6,8 @@
 **Prazo:** 17/11/2026
 
 ## Aluno
-
-| Nome | Matrícula | Usuário do GitHub |
-| --- | --- | --- |
-|  |  |  |
+|       Nome       | Matrícula | Usuário do GitHub |
+| Maria Eduarda    |  2423404  |   MariaEM4rques   |
 
 ## O cenário
 
