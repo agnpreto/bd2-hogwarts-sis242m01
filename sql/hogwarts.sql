@@ -778,24 +778,44 @@ select * from vw_placar_casas;
 -- 8. CONTROLE DE ACESSO (DCL)
 -- =====================================================================
 -- Questão 39
-
+create user 'filch'@'localhost' identified by 'MadameNorra#1';
+create user 'mcgonagall'@'localhost' identified by 'Animago#Gato1';
+create user 'dumbledore'@'localhost' identified by 'Fenix#Fawkes1';
 -- Questão 40
-
+grant select on hogwarts.vw_placar_casas to 'filch'@'localhost';
 -- Questão 41
-
+grant select, insert on hogwarts.registro_pontos to 'mcgonagall'@'localhost';
+grant select on hogwarts.aluno to 'mcgonagall'@'localhost';
+grant select on hogwarts.vw_boletim to 'mcgonagall'@'localhost';
 -- Questão 42
-
+grant all privileges on hogwarts.* to 'dumbledore'@'localhost' with grant option;
 -- Questão 43
-
+show grants for 'filch'@'localhost';
+show grants for 'mcgonagall'@'localhost';
 -- Questão 44
--- Resultado de cada comando:
-
+select * from vw_placar_casas;
+-- resultado: funciona e mostra o placar.
+select * from aluno;
 -- Questão 45
--- Como o trigger conseguiu atualizar a casa:
-
+insert into registro_pontos (id_aluno, id_prof, pontos, motivo, data_registro)
+values (2, 1, 10, 'ajudou um colega em transfiguração', '2026-11-10');
+update casa set pontos = 1000 where id_casa = 1;
+select nome_casa, pontos from casa;   -- grifinória 110
 -- Questão 46
-
+revoke insert on hogwarts.registro_pontos from 'mcgonagall'@'localhost';
+show grants for 'mcgonagall'@'localhost';
 -- Questão 47
--- Vantagem dos papéis:
-
+create role 'monitor';
+grant select on hogwarts.vw_boletim to 'monitor';
+grant select on hogwarts.vw_placar_casas to 'monitor';
+create user 'percy'@'localhost' identified by 'Monitor#Chefe1';
+grant 'monitor' to 'percy'@'localhost';
+set default role 'monitor' to 'percy'@'localhost';
+show grants for 'percy'@'localhost' using 'monitor';
+-- Vantagem dos papéis: Centralizar permissões em um único papel (role) permite conceder e atualizar o acesso de todos os monitores de uma vez, sem repetir GRANT por usuário.
 -- Questão 48
+drop user 'filch'@'localhost';
+drop user 'mcgonagall'@'localhost';
+drop user 'dumbledore'@'localhost';
+drop user 'percy'@'localhost';
+drop role 'monitor';
