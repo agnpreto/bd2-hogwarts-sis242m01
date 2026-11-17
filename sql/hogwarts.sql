@@ -707,22 +707,72 @@ select 'total de galeões nos cofres dos alunos', sum(saldo_galeoes) from aluno;
 -- 7. VIEWS
 -- =====================================================================
 -- Questão 31
-
+create view vw_placar_casas as
+select c.nome_casa, c.pontos
+from casa c
+order by c.pontos desc;
 -- Questão 32
-
+create view vw_boletim as
+select a.nome as aluno,
+coalesce(c.nome_casa, 'sem casa') as casa,
+d.nome_disc as disciplina,
+coalesce(p.nome, 'sem professor') as professor,
+m.nota,
+m.situacao
+from matricula m
+inner join aluno a      on a.id_aluno = m.id_aluno
+inner join disciplina d on d.id_disc = m.id_disc
+left join casa c       on c.id_casa = a.id_casa
+left join professor p  on p.id_prof = d.id_prof;
 -- Questão 33
-
+create view vw_extrato_loja as
+select a.nome as aluno,
+p.nome_produto as produto,
+p.loja,
+c.quantidade,
+c.valor_total,
+c.data_compra
+from compra c
+inner join aluno a   on a.id_aluno = c.id_aluno
+inner join produto p on p.id_produto = c.id_produto;
 -- Questão 34
-
+create view vw_alunos_destaque as
+select a.nome as aluno,
+c.nome_casa as casa,
+round(avg(m.nota), 2) as media
+from aluno a
+inner join matricula m on m.id_aluno = a.id_aluno
+left join casa c      on c.id_casa = a.id_casa
+group by a.id_aluno, a.nome, c.nome_casa
+having avg(m.nota) >= 8;
 -- Questão 35
-
+create view vw_quadro_professores as
+select p.nome as professor,
+coalesce(c.nome_casa, 'não é diretor') as casa_que_dirige,
+(select count(*) from disciplina d where d.id_prof = p.id_prof) as qtd_disciplinas,
+coalesce((select sum(r.pontos) from registro_pontos r where r.id_prof = p.id_prof), 0) as total_pontos_concedidos
+from professor p
+left join casa c on c.id_casa = p.id_casa;
 -- Questão 36
-
+select * from vw_placar_casas;
+select * from vw_boletim where casa = 'corvinal';
+select loja, sum(valor_total) as total_faturado
+from vw_extrato_loja
+group by loja
+order by total_faturado desc;
+select * from vw_alunos_destaque order by media desc;
+select * from vw_quadro_professores order by total_pontos_concedidos desc;
 -- Questão 37
--- O que mudou e por quê:
-
+insert into registro_pontos (id_aluno, id_prof, pontos, motivo, data_registro)
+values (11, 1, 20, 'venceu a primeira tarefa do torneio', '2026-11-10');
+select * from vw_placar_casas;
+-- O que mudou e por quê: O trigger trg_pontos_casa atualizou a pontuação da Lufa-Lufa de 50 para 70 na tabela casa, e a view já exibe o novo valor automaticamente por não armazenar dados e reexecutar a consulta a cada acesso.
 -- Questão 38
-
+create or replace view vw_placar_casas as
+select c.nome_casa, c.fundador, c.pontos
+from casa c
+order by c.pontos desc;
+select * from vw_placar_casas;
 
 -- =====================================================================
 -- 8. CONTROLE DE ACESSO (DCL)
