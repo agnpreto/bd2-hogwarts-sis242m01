@@ -9,7 +9,7 @@
 
 | Nome | Matrícula | Usuário do GitHub |
 | --- | --- | --- |
-|  |  |  |
+| Harrison Ambrozio | 2534655 | HarrisonAmbrosio |
 
 ## O cenário
 
