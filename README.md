@@ -7,9 +7,8 @@
 
 ## Aluno
 
-| Nome | Matrícula | Usuário do GitHub |
 | Miguel Menezes | 2534779 | miguelrcmenezes-cell |
-|  |  |  |
+
 
 ## O cenário
 
