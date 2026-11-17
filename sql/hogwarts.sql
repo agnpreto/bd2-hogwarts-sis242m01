@@ -1,6 +1,6 @@
 -- =====================================================================
 -- ESCOLA DE MAGIA DE HOGWARTS: BANCO DE DADOS COMPLETO
--- Aluno: Miguel Menezes (2534779)
+-- Aluno: Miguel Menezes (2537449)
 -- =====================================================================
 
 DROP DATABASE IF EXISTS hogwarts;
