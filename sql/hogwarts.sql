@@ -445,89 +445,263 @@ select count(*) from log_auditoria;    -- 1
 -- 5. CONTROLE DE TRANSAÇÕES (TCL)
 -- =====================================================================
 -- Questão 26
-
+start transaction;
+update aluno set saldo_galeoes = saldo_galeoes - 50 where nome = 'draco malfoy';
+update aluno set saldo_galeoes = saldo_galeoes + 50 where nome = 'pansy parkinson';
+commit;
+select nome, saldo_galeoes from aluno where nome in ('draco malfoy', 'pansy parkinson');
+-- draco 150.00, pansy 168.00
 -- Questão 27
-
+start transaction;
+update casa set pontos = 0;
+select nome_casa, pontos from casa;   -- todas zeradas
+rollback;
+select nome_casa, pontos from casa;   -- o placar voltou ao que era antes
 -- Questão 28
-
+start transaction;
+insert into compra (id_aluno, id_produto, quantidade, data_compra)
+values (1, 1, 1, '2026-11-10');
+select saldo_galeoes from aluno where id_aluno = 1;       -- 47.00
+select estoque from produto where id_produto = 1;         -- 8
+rollback;
+select saldo_galeoes from aluno where id_aluno = 1;       -- 54.00
+select estoque from produto where id_produto = 1;         -- 9
 -- Questão 29
-
+start transaction;
+insert into registro_pontos (id_aluno, id_prof, pontos, motivo, data_registro)
+values (12, 4, 15, 'cuidou das estufas no feriado', '2026-11-10');
+savepoint sp_pontos_legitimos;
+insert into registro_pontos (id_aluno, id_prof, pontos, motivo, data_registro)
+values (6, 2, 100, 'favoritismo descarado', '2026-11-10');
+rollback to sp_pontos_legitimos;
+commit;
+select nome_casa, pontos from casa;
+-- grifinória 100, corvinal 50, lufa-lufa 50, sonserina 30
+select count(*) from registro_pontos;  
 -- Questão 30
--- Resposta:
-
+select @@autocommit;
+-- Resposta: O valor 1 indica que o autocommit está ligado, exigindo START TRANSACTION para agrupar comandos, mas usar um comando DDL (como CREATE TABLE) no meio gera um commit implícito e impede que o ROLLBACK desfaça as ações anteriores.
 
 -- =====================================================================
 -- 6. DESAFIOS DE CONSULTA
 -- =====================================================================
 -- ---------- Nível 1: filtros e operadores especiais ----------
-
 -- 6.1
-
+select p.nome, p.salario
+from professor p
+where p.salario between 6000.00 and 9000.00
+order by p.salario desc;
 -- 6.2
-
+select a.nome, a.ano_escolar
+from aluno a
+where a.ano_escolar in (1, 4, 6, 7)
+order by a.ano_escolar;
 -- 6.3
-
+select a.nome
+from aluno a
+where a.nome like '_a%';
 -- 6.4
-
+select d.nome_disc
+from disciplina d
+where d.id_prof is null;
 -- 6.5
-
+select p.nome_produto, p.preco
+from produto p
+where p.preco not between 5 and 20
+order by p.preco;
 -- 6.6
-
+select distinct p.loja
+from produto p
+order by p.loja;
 -- ---------- Nível 2: JOINs ----------
-
 -- 6.7
--- Quantos alunos e por quê:
-
+select a.nome as aluno, c.nome_casa as casa
+from aluno a
+inner join casa c on c.id_casa = a.id_casa
+order by c.nome_casa, a.nome;
+-- Quantos alunos e por quê: São 12 alunos, pois o INNER JOIN traz apenas registros com correspondência nas duas tabelas, deixando de fora o Teddy Lupin (que está com id_casa nulo).
 -- 6.8
-
+select a.nome as aluno,
+coalesce(c.nome_casa, 'aguardando o chapéu seletor') as casa
+from aluno a
+left join casa c on c.id_casa = a.id_casa
+order by a.nome;
 -- 6.9
-
+select p.nome as professor
+from disciplina d
+right join professor p on p.id_prof = d.id_prof
+where d.id_disc is null;
 -- 6.10
-
+select a.nome as aluno,
+d.nome_disc as disciplina,
+p.nome as professor,
+m.nota,
+m.situacao
+from aluno a
+inner join casa c       on c.id_casa = a.id_casa
+inner join matricula m  on m.id_aluno = a.id_aluno
+inner join disciplina d on d.id_disc = m.id_disc
+left join professor p  on p.id_prof = d.id_prof
+where c.nome_casa = 'grifinória'
+order by a.nome, d.nome_disc;
 -- 6.11
-
+select c.id_compra as numero_compra,
+a.nome as aluno,
+p.nome_produto as produto,
+p.loja,
+c.quantidade,
+c.valor_total,
+c.data_compra
+from compra c
+inner join aluno a   on a.id_aluno = c.id_aluno
+inner join produto p on p.id_produto = c.id_produto
+order by c.data_compra, c.id_compra;
 -- ---------- Nível 3: agrupamento e agregação ----------
-
 -- 6.12
-
+select d.nome_disc as disciplina,
+count(*) as qtd_alunos,
+round(avg(m.nota), 2) as media,
+max(m.nota) as maior_nota,
+min(m.nota) as menor_nota
+from disciplina d
+inner join matricula m on m.id_disc = d.id_disc
+group by d.id_disc, d.nome_disc
+having avg(m.nota) >= 7
+order by media desc;
 -- 6.13
-
+select c.nome_casa as casa,
+count(*) as qtd_registros,
+sum(case when r.pontos > 0 then r.pontos else 0 end) as pontos_ganhos,
+sum(case when r.pontos < 0 then r.pontos else 0 end) as pontos_perdidos,
+sum(r.pontos) as saldo
+from registro_pontos r
+inner join aluno a on a.id_aluno = r.id_aluno
+inner join casa c  on c.id_casa = a.id_casa
+group by c.id_casa, c.nome_casa
+order by saldo desc;
 -- 6.14
-
+select p.loja,
+count(*) as qtd_compras,
+sum(c.valor_total) as faturamento
+from compra c
+inner join produto p on p.id_produto = c.id_produto
+group by p.loja
+having sum(c.valor_total) > 20
+order by faturamento desc;
 -- 6.15
-
+select month(r.data_registro) as mes,
+count(*) as qtd_registros,
+sum(r.pontos) as total_pontos
+from registro_pontos r
+group by month(r.data_registro)
+order by mes;
 -- 6.16
-
+select p.nome as professor,
+count(*) as qtd_registros,
+sum(r.pontos) as total_concedido
+from registro_pontos r
+inner join professor p on p.id_prof = r.id_prof
+group by p.id_prof, p.nome
+having count(*) >= 2
+order by total_concedido desc;
 -- ---------- Nível 4: subconsultas ----------
-
 -- 6.17
-
+select a.nome
+from aluno a
+ where a.id_aluno in (
+select c.id_aluno
+from compra c
+where c.id_produto in (
+select p.id_produto
+from produto p
+where p.loja = 'dedosdemel'));
 -- 6.18
-
+select p.nome_produto, p.estoque
+from produto p
+where p.id_produto not in (select c.id_produto from compra c);
 -- 6.19
-
+select a.nome, a.saldo_galeoes
+from aluno a
+where a.saldo_galeoes > (select avg(saldo_galeoes) from aluno);
 -- 6.20
-
+select p.nome, p.salario
+from professor p
+where p.salario > all (select salario from professor where id_casa is null);
 -- 6.21
--- > ANY equivale a:
-
+select a.nome, a.saldo_galeoes
+from aluno a
+where a.id_casa <> (select id_casa from casa where nome_casa = 'sonserina')
+and a.saldo_galeoes > any (
+select a2.saldo_galeoes
+from aluno a2
+where a2.id_casa = (select id_casa from casa where nome_casa = 'sonserina'));
+-- > ANY equivale a: comparar com o menor valor da subconsulta (basta ser maior que algum, ou seja, maior que o mínimo). aqui o menor saldo da sonserina é 150.
 -- 6.22
-
+select c.nome_casa
+from casa c
+where exists (
+select 1
+from aluno a
+inner join matricula m on m.id_aluno = a.id_aluno
+where a.id_casa = c.id_casa
+and m.nota = 10);
 -- 6.23
-
+select a.nome
+from aluno a
+where not exists (
+select 1
+from compra c
+where c.id_aluno = a.id_aluno);
 -- 6.24
-
+select c.nome_casa as casa,
+round(avg(t.media_aluno), 2) as media_casa
+from (select a.id_aluno, a.id_casa, avg(m.nota) as media_aluno
+from aluno a
+inner join matricula m on m.id_aluno = a.id_aluno
+group by a.id_aluno, a.id_casa) t
+inner join casa c on c.id_casa = t.id_casa
+group by c.id_casa, c.nome_casa
+order by media_casa desc;
 -- ---------- Nível 5: UNION ALL ----------
-
 -- 6.25
-
+select a.nome, 'aluno' as vinculo from aluno a
+union all
+select p.nome, 'professor' as vinculo from professor p
+order by nome;
 -- 6.26
+select a.nome
+from aluno a
+where a.id_aluno in (select id_aluno from compra)
+union all
+select a.nome
+from aluno a
+where a.id_aluno in (select id_aluno from registro_pontos);
 -- Linhas com UNION ALL:
+select a.nome
+from aluno a
+where a.id_aluno in (select id_aluno from compra)
+union all
+select a.nome
+from aluno a
+where a.id_aluno in (select id_aluno from registro_pontos);
 -- Linhas com UNION:
--- Explicação:
-
+select a.nome
+from aluno a
+where a.id_aluno in (select id_aluno from compra)
+union
+select a.nome
+from aluno a
+where a.id_aluno in (select id_aluno from registro_pontos);
+-- Explicação: O UNION ALL mantém todas as linhas (inclusive duplicadas), enquanto o UNION remove as repetições e exibe cada aluno apenas uma vez.
 -- 6.27
-
+select 'total de pontos distribuídos' as indicador, sum(pontos) as valor from registro_pontos
+union all
+select 'total de galeões gastos na loja', sum(valor_total) from compra
+union all
+select 'folha salarial dos professores', sum(salario) from professor
+union all
+select 'total de galeões nos cofres dos alunos', sum(saldo_galeoes) from aluno;
+-- folha salarial: 61260.00
 
 -- =====================================================================
 -- 7. VIEWS
