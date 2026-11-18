@@ -519,78 +519,275 @@ SELECT @@autocommit;
 -- Explicação: O valor 1 significa que o modo autocommit está ativado (cada instrução SQL isolada é confirmada automaticamente como uma transação própria assim que executada). Se você executar um comando DDL (como CREATE TABLE, ALTER TABLE ou DROP TABLE) no meio de uma transação aberta, o MySQL realiza um COMMIT implícito automático antes de executar o comando DDL, confirmando permanentemente tudo o que foi feito na transação até aquele ponto.
 
 
--- =====================================================================
--- 6. DESAFIOS DE CONSULTA
--- =====================================================================
--- ---------- Nível 1: filtros e operadores especiais ----------
+-- ============================================================================
+--  6: DESAFIOS DE CONSULTA 
+-- ============================================================================
 
--- 6.1
+-- Nível 1: Filtros e operadores especiais
 
--- 6.2
+-- Questão 6.1: Faixa salarial (BETWEEN)
+SELECT p.nome, p.salario
+FROM professor p
+WHERE p.salario BETWEEN 6000.00 AND 9000.00
+ORDER BY p.salario DESC;
 
--- 6.3
+-- Questão 6.2: Anos selecionados (IN)
+SELECT a.nome, a.ano_escolar
+FROM aluno a
+WHERE a.ano_escolar IN (1, 4, 6, 7)
+ORDER BY a.ano_escolar ASC;
 
--- 6.4
+-- Questão 6.3: Busca por padrão (LIKE com _)
+SELECT a.nome
+FROM aluno a
+WHERE a.nome LIKE '_a%';
 
--- 6.5
+-- Questão 6.4: Disciplina órfã (IS NULL)
+SELECT d.nome_disc, d.ano_minimo
+FROM disciplina d
+WHERE d.id_prof IS NULL;
 
--- 6.6
+-- Questão 6.5: Fora da faixa (NOT BETWEEN)
+SELECT pr.nome_produto, pr.preco
+FROM produto pr
+WHERE pr.preco NOT BETWEEN 5.00 AND 20.00
+ORDER BY pr.preco ASC;
 
--- ---------- Nível 2: JOINs ----------
+-- Questão 6.6: Lojas do Beco Diagonal (DISTINCT)
+SELECT DISTINCT pr.loja
+FROM produto pr
+ORDER BY pr.loja ASC;
 
--- 6.7
--- Quantos alunos e por quê:
 
--- 6.8
+-- Nível 2: JOINs
 
--- 6.9
+-- Questão 6.7: Quem é de qual casa (INNER JOIN)
+SELECT a.nome AS aluno, c.nome_casa AS casa
+FROM aluno a
+INNER JOIN casa c ON a.id_casa = c.id_casa
+ORDER BY c.nome_casa ASC, a.nome ASC;
+-- Explicação: Aparecem 12 alunos (e não 13) porque o INNER JOIN retorna apenas registros com correspondência nas duas tabelas; o aluno Teddy Lupin possui id_casa NULL (ainda não passou pelo Chapéu Seletor) e fica de fora.
 
--- 6.10
+-- Questão 6.8: Todos os alunos (LEFT JOIN)
+SELECT a.nome AS aluno, COALESCE(c.nome_casa, 'Aguardando o Chapéu Seletor') AS casa
+FROM aluno a
+LEFT JOIN casa c ON a.id_casa = c.id_casa;
 
--- 6.11
+-- Questão 6.9: Professor sem turma (RIGHT JOIN)
+SELECT p.nome AS professor
+FROM disciplina d
+RIGHT JOIN professor p ON d.id_prof = p.id_prof
+WHERE d.id_disc IS NULL;
 
--- ---------- Nível 3: agrupamento e agregação ----------
+-- Questão 6.10: Boletim da Grifinória (JOIN com 5 tabelas)
+SELECT 
+    a.nome AS aluno,
+    d.nome_disc AS disciplina,
+    COALESCE(p.nome, 'Sem professor') AS professor,
+    m.nota,
+    m.situacao
+FROM aluno a
+INNER JOIN casa c ON a.id_casa = c.id_casa
+INNER JOIN matricula m ON a.id_aluno = m.id_aluno
+INNER JOIN disciplina d ON m.id_disc = d.id_disc
+LEFT JOIN professor p ON d.id_prof = p.id_prof
+WHERE c.nome_casa = 'Grifinória'
+ORDER BY a.nome ASC, d.nome_disc ASC;
 
--- 6.12
+-- Questão 6.11: Extrato do Beco Diagonal (JOIN com 3 tabelas)
+SELECT 
+    co.id_compra AS numero_compra,
+    a.nome AS aluno,
+    pr.nome_produto AS produto,
+    pr.loja,
+    co.quantidade,
+    co.valor_total,
+    co.data_compra
+FROM compra co
+INNER JOIN aluno a ON co.id_aluno = a.id_aluno
+INNER JOIN produto pr ON co.id_produto = pr.id_produto
+ORDER BY co.data_compra ASC, co.id_compra ASC;
 
--- 6.13
 
--- 6.14
+-- Nível 3: Agrupamento e funções de agregação
 
--- 6.15
+-- Questão 6.12: Desempenho por disciplina
+SELECT 
+    d.nome_disc AS disciplina,
+    COUNT(m.id_aluno) AS qtd_alunos,
+    ROUND(AVG(m.nota), 2) AS media_notas,
+    MAX(m.nota) AS maior_nota,
+    MIN(m.nota) AS menor_nota
+FROM disciplina d
+INNER JOIN matricula m ON d.id_disc = m.id_disc
+GROUP BY d.id_disc, d.nome_disc
+HAVING AVG(m.nota) >= 7
+ORDER BY media_notas DESC;
 
--- 6.16
+-- Questão 6.13: Livro-razão da Taça
+SELECT 
+    c.nome_casa AS casa,
+    COUNT(rp.id_registro) AS qtd_registros,
+    COALESCE(SUM(CASE WHEN rp.pontos > 0 THEN rp.pontos ELSE 0 END), 0) AS pontos_ganhos,
+    COALESCE(SUM(CASE WHEN rp.pontos < 0 THEN rp.pontos ELSE 0 END), 0) AS pontos_perdidos,
+    COALESCE(SUM(rp.pontos), 0) AS saldo_pontos
+FROM casa c
+LEFT JOIN aluno a ON c.id_casa = a.id_casa
+LEFT JOIN registro_pontos rp ON a.id_aluno = rp.id_aluno
+GROUP BY c.id_casa, c.nome_casa;
 
--- ---------- Nível 4: subconsultas ----------
+-- Questão 6.14: Faturamento por loja
+SELECT 
+    pr.loja,
+    COUNT(co.id_compra) AS qtd_compras,
+    SUM(co.valor_total) AS faturamento
+FROM produto pr
+INNER JOIN compra co ON pr.id_produto = co.id_produto
+GROUP BY pr.loja
+HAVING SUM(co.valor_total) > 20
+ORDER BY faturamento DESC;
 
--- 6.17
+-- Questão 6.15: Pontos por mês
+SELECT 
+    MONTH(rp.data_registro) AS mes,
+    COUNT(rp.id_registro) AS qtd_registros,
+    SUM(rp.pontos) AS total_pontos
+FROM registro_pontos rp
+GROUP BY MONTH(rp.data_registro)
+ORDER BY mes ASC;
 
--- 6.18
+-- Questão 6.16: Professores mais ativos
+SELECT 
+    p.nome AS professor,
+    COUNT(rp.id_registro) AS qtd_registros,
+    SUM(rp.pontos) AS total_concedido
+FROM professor p
+INNER JOIN registro_pontos rp ON p.id_prof = rp.id_prof
+GROUP BY p.id_prof, p.nome
+HAVING COUNT(rp.id_registro) >= 2
+ORDER BY total_concedido DESC;
 
--- 6.19
 
--- 6.20
+-- Nível 4: Subconsultas (IN, NOT IN, escalar, ALL, ANY, EXISTS, FROM)
 
--- 6.21
--- > ANY equivale a:
+-- Questão 6.17: Clientes da Dedosdemel (IN)
+SELECT a.nome
+FROM aluno a
+WHERE a.id_aluno IN (
+    SELECT co.id_aluno
+    FROM compra co
+    WHERE co.id_produto IN (
+        SELECT pr.id_produto
+        FROM produto pr
+        WHERE pr.loja = 'Dedosdemel'
+    )
+);
 
--- 6.22
+-- Questão 6.18: Encalhados (NOT IN)
+SELECT pr.nome_produto, pr.estoque
+FROM produto pr
+WHERE pr.id_produto NOT IN (
+    SELECT DISTINCT co.id_produto
+    FROM compra co
+);
 
--- 6.23
+-- Questão 6.19: Cofres cheios (subconsulta escalar)
+SELECT a.nome, a.saldo_galeoes
+FROM aluno a
+WHERE a.saldo_galeoes > (
+    SELECT AVG(saldo_galeoes) FROM aluno
+);
 
--- 6.24
+-- Questão 6.20: Acima de todos (ALL)
+SELECT p.nome, p.salario
+FROM professor p
+WHERE p.salario > ALL (
+    SELECT salario
+    FROM professor
+    WHERE id_casa IS NULL
+);
 
--- ---------- Nível 5: UNION ALL ----------
+-- Questão 6.21: Mais rico que algum sonserino (ANY)
+SELECT a.nome, a.saldo_galeoes
+FROM aluno a
+WHERE a.id_casa <> (SELECT id_casa FROM casa WHERE nome_casa = 'Sonserina')
+  AND a.saldo_galeoes > ANY (
+      SELECT saldo_galeoes
+      FROM aluno
+      WHERE id_casa = (SELECT id_casa FROM casa WHERE nome_casa = 'Sonserina')
+  );
+-- Explicação: O operador > ANY equivale a comparar com o MENOR valor retornado pela subconsulta (basta que o saldo seja maior que o do aluno mais pobre da Sonserina para a condição ser verdadeira).
 
--- 6.25
+-- Questão 6.22: Casas com nota máxima (EXISTS)
+SELECT c.nome_casa
+FROM casa c
+WHERE EXISTS (
+    SELECT 1
+    FROM aluno a
+    INNER JOIN matricula m ON a.id_aluno = m.id_aluno
+    WHERE a.id_casa = c.id_casa
+      AND m.nota = 10
+);
 
--- 6.26
--- Linhas com UNION ALL:
--- Linhas com UNION:
--- Explicação:
+-- Questão 6.23: Nunca foram ao Beco (NOT EXISTS)
+SELECT a.nome
+FROM aluno a
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM compra co
+    WHERE co.id_aluno = a.id_aluno
+);
 
--- 6.27
+-- Questão 6.24: Média das médias (subconsulta no FROM)
+SELECT 
+    c.nome_casa AS casa,
+    ROUND(AVG(medias_alunos.media_aluno), 2) AS media_casa
+FROM (
+    SELECT a.id_casa, AVG(m.nota) AS media_aluno
+    FROM aluno a
+    INNER JOIN matricula m ON a.id_aluno = m.id_aluno
+    WHERE a.id_casa IS NOT NULL
+    GROUP BY a.id_aluno, a.id_casa
+) AS medias_alunos
+INNER JOIN casa c ON medias_alunos.id_casa = c.id_casa
+GROUP BY c.id_casa, c.nome_casa
+ORDER BY media_casa DESC;
 
+
+-- Nível 5: UNION ALL
+
+-- Questão 6.25: Diretório de Hogwarts
+SELECT nome, 'Aluno' AS vinculo FROM aluno
+UNION ALL
+SELECT nome, 'Professor' AS vinculo FROM professor
+ORDER BY nome ASC;
+
+-- Questão 6.26: UNION x UNION ALL
+SELECT a.nome
+FROM aluno a
+INNER JOIN compra co ON a.id_aluno = co.id_aluno
+UNION ALL
+SELECT a.nome
+FROM aluno a
+INNER JOIN registro_pontos rp ON a.id_aluno = rp.id_aluno;
+
+SELECT a.nome
+FROM aluno a
+INNER JOIN compra co ON a.id_aluno = co.id_aluno
+UNION
+SELECT a.nome
+FROM aluno a
+INNER JOIN registro_pontos rp ON a.id_aluno = rp.id_aluno;
+-- Explicação: A consulta com UNION ALL retornou 27 linhas, enquanto a consulta com UNION retornou 12 linhas. A diferença ocorre porque o UNION ALL mantém todas as ocorrências (inclusive duplicatas de alunos que fizeram várias compras ou receberam pontos várias vezes), enquanto o UNION elimina automaticamente as linhas duplicadas, retornando apenas nomes distintos.
+
+-- Questão 6.27: Painel do Diretor
+SELECT 'Total de pontos distribuídos' AS indicador, SUM(pontos) AS valor FROM registro_pontos
+UNION ALL
+SELECT 'Total de galeões gastos na loja' AS indicador, SUM(valor_total) AS valor FROM compra
+UNION ALL
+SELECT 'Folha salarial dos professores' AS indicador, SUM(salario) AS valor FROM professor
+UNION ALL
+SELECT 'Total de galeões nos cofres dos alunos' AS indicador, SUM(saldo_galeoes) AS valor FROM aluno;
 
 -- =====================================================================
 -- 7. VIEWS
