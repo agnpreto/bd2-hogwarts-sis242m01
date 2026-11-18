@@ -9,7 +9,7 @@
 
 | Nome | Matrícula | Usuário do GitHub |
 | --- | --- | --- |
-|  |  |  |
+| Kauã Monteiro | 2533406 | Kauaks |
 
 ## O cenário
 
