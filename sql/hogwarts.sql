@@ -211,58 +211,102 @@ SELECT
     (SELECT COUNT(*) FROM produto) AS produtos;
 
 
--- =====================================================================
--- 2. MANUTENÇÃO PÓS-CARGA (ALTER E UPDATE)
--- =====================================================================
+-- ============================================================================
+-- SEÇÃO 2: MANUTENÇÃO PÓS-CARGA (ALTER E UPDATE)
+-- ============================================================================
+
 -- Questão 1
+ALTER TABLE aluno ADD COLUMN email VARCHAR(100);
 
 -- Questão 2
+ALTER TABLE matricula ADD COLUMN situacao VARCHAR(20) DEFAULT 'Cursando';
 
 -- Questão 3
+ALTER TABLE produto ADD COLUMN ativo CHAR(1) DEFAULT 'S';
 
 -- Questão 4
+ALTER TABLE casa MODIFY COLUMN fundador VARCHAR(100);
 
 -- Questão 5
+ALTER TABLE professor RENAME COLUMN data_contratacao TO data_admissao;
 
 -- Questão 6
+UPDATE aluno
+SET email = CONCAT(LOWER(REPLACE(nome, ' ', '.')), '@hogwarts.edu');
 
 -- Questão 7
+ALTER TABLE aluno ADD CONSTRAINT uq_aluno_email UNIQUE (email);
 
 -- Questão 8
+UPDATE matricula
+SET nota = LEAST(nota + 0.5, 10.00)
+WHERE id_disc IN (
+    SELECT id_disc 
+    FROM disciplina 
+    WHERE id_prof = (SELECT id_prof FROM professor WHERE nome = 'Remo Lupin')
+);
 
 -- Questão 9
+UPDATE matricula
+SET situacao = CASE
+    WHEN nota >= 6 THEN 'Aprovado'
+    ELSE 'Reprovado'
+END;
 
 -- Questão 10
+UPDATE professor
+SET salario = salario * 1.10
+WHERE id_casa IS NOT NULL
+  AND data_admissao < '1980-01-01';
 
 -- Questão 11
+UPDATE produto
+SET ativo = 'N'
+WHERE estoque = 0;
 
 -- Questão 12
+UPDATE produto
+SET preco = preco * 0.80
+WHERE loja = 'Dedosdemel';
 
+-- ============================================================================
+-- SEÇÃO 3: REMOÇÃO DE DADOS (DELETE) E TESTES DE RESTRIÇÕES
+-- ============================================================================
 
--- =====================================================================
--- 3. REMOÇÃO DE DADOS (DELETE) E TESTES DE RESTRIÇÕES
--- =====================================================================
--- Questão 13
--- Erro:
--- Explicação:
+-- Questão 13: Teste de chave estrangeira
+-- DELETE FROM casa WHERE nome_casa = 'Sonserina';
+-- Erro: Error Code: 1451. Cannot delete or update a parent row: a foreign key constraint fails (`hogwarts`.`professor`, CONSTRAINT `fk_professor_casa` FOREIGN KEY (`id_casa`) REFERENCES `casa` (`id_casa`))
+-- Explicação: O banco recusa a exclusão para manter a integridade referencial, pois existem professores (como Severo Snape) e alunos vinculados ao id_casa da Sonserina.
 
--- Questão 14
--- Erro:
--- Explicação:
+-- Questão 14: Teste de CHECK
+-- INSERT INTO aluno (nome, ano_escolar, id_casa) VALUES ('Dobby', 8, 1);
+-- Erro: Error Code: 3819. Check constraint 'aluno_chk_1' is violated.
+-- Explicação: A tabela aluno possui uma restrição CHECK que exige que o ano_escolar esteja entre 1 e 7. O valor 8 viola essa regra de domínio.
 
--- Questão 15
--- Erro:
--- Explicação:
+-- Questão 15: Teste de UNIQUE
+-- INSERT INTO aluno (nome, ano_escolar, id_casa, email) VALUES ('Harry Potter (Polissuco)', 5, 1, 'harry.potter@hogwarts.edu');
+-- Erro: Error Code: 1062. Duplicate entry 'harry.potter@hogwarts.edu' for key 'aluno.uq_aluno_email'
+-- Explicação: A restrição UNIQUE (uq_aluno_email) impede que dois registros possuam o mesmo endereço de e-mail na tabela aluno.
 
--- Questão 16
--- Erro:
--- Explicação:
+-- Questão 16: Teste de integridade
+-- DELETE FROM professor WHERE nome = 'Severo Snape';
+-- Erro: Error Code: 1451. Cannot delete or update a parent row: a foreign key constraint fails (`hogwarts`.`disciplina`, CONSTRAINT `fk_disciplina_professor` FOREIGN KEY (`id_prof`) REFERENCES `professor` (`id_prof`))
+-- Explicação: Severo Snape está referenciado como chave estrangeira na tabela disciplina (ministra 'Poções'), impedindo sua exclusão enquanto houver disciplinas vinculadas a ele.
 
 -- Questão 17
+DELETE FROM professor WHERE nome = 'Gilderoy Lockhart';
+-- Explicação: Este comando funciona porque Gilderoy Lockhart não possui nenhum registro filho apontando para o seu id_prof nas tabelas disciplina ou registro_pontos, não violando nenhuma chave estrangeira.
 
 -- Questão 18
+DELETE FROM matricula
+WHERE id_aluno IN (SELECT id_aluno FROM aluno WHERE nome = 'Vicente Crabbe');
+
+DELETE FROM aluno
+WHERE nome = 'Vicente Crabbe';
 
 -- Questão 19
+DELETE FROM disciplina
+WHERE id_disc NOT IN (SELECT DISTINCT id_disc FROM matricula);
 
 
 -- =====================================================================
