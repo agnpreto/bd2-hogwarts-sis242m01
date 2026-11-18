@@ -8,7 +8,7 @@
 ## Aluno
 
 | Nome | Matrícula | Usuário do GitHub |
-| --- | --- | --- |
+| IAN TAKASHIMA | 2538587| shunichitaka|
 |  |  |  |
 
 ## O cenário
