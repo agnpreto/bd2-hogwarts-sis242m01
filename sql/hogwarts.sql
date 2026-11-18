@@ -789,50 +789,150 @@ SELECT 'Folha salarial dos professores' AS indicador, SUM(salario) AS valor FROM
 UNION ALL
 SELECT 'Total de galeões nos cofres dos alunos' AS indicador, SUM(saldo_galeoes) AS valor FROM aluno;
 
--- =====================================================================
--- 7. VIEWS
--- =====================================================================
+-- ============================================================================
+-- 7: VIEWS
+-- ============================================================================
+
 -- Questão 31
+CREATE VIEW vw_placar_casas AS
+SELECT nome_casa AS casa, pontos
+FROM casa
+ORDER BY pontos DESC;
 
 -- Questão 32
+CREATE VIEW vw_boletim AS
+SELECT 
+    a.nome AS aluno,
+    COALESCE(c.nome_casa, 'Sem casa') AS casa,
+    d.nome_disc AS disciplina,
+    COALESCE(p.nome, 'Sem professor') AS professor,
+    m.nota,
+    m.situacao
+FROM matricula m
+INNER JOIN aluno a ON m.id_aluno = a.id_aluno
+LEFT JOIN casa c ON a.id_casa = c.id_casa
+INNER JOIN disciplina d ON m.id_disc = d.id_disc
+LEFT JOIN professor p ON d.id_prof = p.id_prof;
 
 -- Questão 33
+CREATE VIEW vw_extrato_loja AS
+SELECT 
+    a.nome AS aluno,
+    pr.nome_produto AS produto,
+    pr.loja,
+    co.quantidade,
+    co.valor_total,
+    co.data_compra
+FROM compra co
+INNER JOIN aluno a ON co.id_aluno = a.id_aluno
+INNER JOIN produto pr ON co.id_produto = pr.id_produto;
 
 -- Questão 34
+CREATE VIEW vw_alunos_destaque AS
+SELECT 
+    a.nome AS aluno,
+    COALESCE(c.nome_casa, 'Sem casa') AS casa,
+    ROUND(AVG(m.nota), 2) AS media_notas
+FROM aluno a
+LEFT JOIN casa c ON a.id_casa = c.id_casa
+INNER JOIN matricula m ON a.id_aluno = m.id_aluno
+GROUP BY a.id_aluno, a.nome, c.nome_casa
+HAVING AVG(m.nota) >= 8;
 
 -- Questão 35
+CREATE VIEW vw_quadro_professores AS
+SELECT 
+    p.nome AS professor,
+    COALESCE((SELECT c.nome_casa FROM casa c WHERE c.id_casa = p.id_casa), 'Não é diretor') AS casa_dirigida,
+    (SELECT COUNT(*) FROM disciplina d WHERE d.id_prof = p.id_prof) AS qtd_disciplinas,
+    COALESCE((SELECT SUM(rp.pontos) FROM registro_pontos rp WHERE rp.id_prof = p.id_prof), 0) AS total_pontos_concedidos
+FROM professor p;
 
--- Questão 36
+-- Questão 36: Usando as views
+SELECT * FROM vw_placar_casas;
 
--- Questão 37
--- O que mudou e por quê:
+SELECT * FROM vw_boletim
+WHERE casa = 'Corvinal';
+
+SELECT loja, SUM(valor_total) AS total_faturado
+FROM vw_extrato_loja
+GROUP BY loja;
+
+SELECT * FROM vw_alunos_destaque
+ORDER BY media_notas DESC;
+
+SELECT * FROM vw_quadro_professores
+ORDER BY total_pontos_concedidos DESC;
+
+-- Questão 37: A view é "viva"
+INSERT INTO registro_pontos (id_aluno, id_prof, pontos, motivo, data_registro)
+VALUES (11, 1, 20, 'Venceu a primeira tarefa do Torneio', '2026-11-10');
+
+SELECT * FROM vw_placar_casas;
+-- Explicação: A Lufa-Lufa passou de 50 para 70 pontos no resultado da view. Isso acontece porque uma view não armazena dados fisicamente; ela é uma consulta armazenada que lê diretamente das tabelas base em tempo real sempre que é consultada.
 
 -- Questão 38
+CREATE OR REPLACE VIEW vw_placar_casas AS
+SELECT nome_casa AS casa, fundador, pontos
+FROM casa
+ORDER BY pontos DESC;
 
 
--- =====================================================================
--- 8. CONTROLE DE ACESSO (DCL)
--- =====================================================================
+-- ============================================================================
+-- 8: CONTROLE DE ACESSO (DCL)
+-- ============================================================================
+
+-- Garantia de execução limpa caso o script seja rodado novamente
+DROP USER IF EXISTS 'filch'@'localhost', 'mcgonagall'@'localhost', 'dumbledore'@'localhost', 'percy'@'localhost';
+DROP ROLE IF EXISTS 'monitor';
+
 -- Questão 39
+CREATE USER 'filch'@'localhost' IDENTIFIED BY 'MadameNorra#1';
+CREATE USER 'mcgonagall'@'localhost' IDENTIFIED BY 'Animago#Gato1';
+CREATE USER 'dumbledore'@'localhost' IDENTIFIED BY 'Fenix#Fawkes1';
 
 -- Questão 40
+GRANT SELECT ON hogwarts.vw_placar_casas TO 'filch'@'localhost';
 
 -- Questão 41
+GRANT SELECT, INSERT ON hogwarts.registro_pontos TO 'mcgonagall'@'localhost';
+GRANT SELECT ON hogwarts.aluno TO 'mcgonagall'@'localhost';
+GRANT SELECT ON hogwarts.vw_boletim TO 'mcgonagall'@'localhost';
 
 -- Questão 42
+GRANT ALL PRIVILEGES ON hogwarts.* TO 'dumbledore'@'localhost' WITH GRANT OPTION;
 
 -- Questão 43
+SHOW GRANTS FOR 'filch'@'localhost';
+SHOW GRANTS FOR 'mcgonagall'@'localhost';
 
--- Questão 44
--- Resultado de cada comando:
+-- Questão 44: Testes conectado como filch (executados em conexão separada do Workbench)
+-- SELECT * FROM hogwarts.vw_placar_casas;
+-- Resultado: Funciona normalmente e exibe o placar das casas (casa, fundador, pontos).
+-- SELECT * FROM hogwarts.aluno;
+-- Erro: Error Code: 1142. SELECT command denied to user 'filch'@'localhost' for table 'aluno'
+-- Explicação: O usuário filch recebeu apenas permissão de SELECT na view vw_placar_casas, não tendo acesso direto à tabela aluno.
 
--- Questão 45
--- Como o trigger conseguiu atualizar a casa:
+-- Questão 45: Testes conectado como mcgonagall (executados em conexão separada do Workbench)
+-- a) INSERT INTO hogwarts.registro_pontos (id_aluno, id_prof, pontos, motivo, data_registro) VALUES (2, 1, 10, 'Ajudou um colega em Transfiguração', '2026-11-10');
+-- b) UPDATE hogwarts.casa SET pontos = 1000 WHERE id_casa = 1;
+-- Erro no comando b: Error Code: 1142. UPDATE command denied to user 'mcgonagall'@'localhost' for table 'casa'
+-- Explicação: Por padrão no MySQL, triggers executam com os privilégios do usuário que os criou (DEFINER, neste caso o root@localhost), e não com os privilégios do usuário que disparou o evento (mcgonagall). Por isso o trigger trg_pontos_casa conseguiu atualizar a tabela casa indiretamente, enquanto o UPDATE direto da McGonagall foi bloqueado.
 
 -- Questão 46
+REVOKE INSERT ON hogwarts.registro_pontos FROM 'mcgonagall'@'localhost';
+SHOW GRANTS FOR 'mcgonagall'@'localhost';
 
--- Questão 47
--- Vantagem dos papéis:
+-- Questão 47: Papéis (roles)
+CREATE ROLE 'monitor';
+GRANT SELECT ON hogwarts.vw_boletim TO 'monitor';
+GRANT SELECT ON hogwarts.vw_placar_casas TO 'monitor';
 
--- Questão 48
+CREATE USER 'percy'@'localhost' IDENTIFIED BY 'Monitor#Chefe1';
+GRANT 'monitor' TO 'percy'@'localhost';
+SET DEFAULT ROLE 'monitor' TO 'percy'@'localhost';
+-- Explicação: Usar papéis (roles) centraliza o gerenciamento de permissões: em vez de conceder ou revogar privilégios individualmente para cada usuário monitor, basta alterar as permissões do papel 'monitor' uma única vez que todos os usuários associados a ele herdam a mudança automaticamente.
 
+-- Questão 48: Limpeza final de usuários e papéis
+DROP USER 'filch'@'localhost', 'mcgonagall'@'localhost', 'dumbledore'@'localhost', 'percy'@'localhost';
+DROP ROLE 'monitor';
